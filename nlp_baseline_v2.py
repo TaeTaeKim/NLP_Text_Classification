@@ -19,7 +19,7 @@
 # !pip install -r requirements.txt
 
 
-# In[2]:
+# In[73]:
 
 
 import pandas as pd
@@ -67,9 +67,10 @@ from transformers import (
     BertForSequenceClassification,
     AlbertForSequenceClassification
 )
+from kobert_tokenizer import KoBERTTokenizer
 
 
-# In[3]:
+# In[74]:
 
 
 # 사용할 GPU 지정
@@ -80,18 +81,18 @@ print("Does GPU exist? : ", use_cuda)
 DEVICE = torch.device("cuda" if use_cuda else "cpu")
 
 
-# In[4]:
+# In[75]:
 
 
 # True 일 때 코드를 실행하면 example 등을 보여줌
 DEBUG = False
 
 
-# In[5]:
+# In[76]:
 
 
 # config 파일 불러오기
-config_path = os.path.join('config.json')
+config_path = os.path.join('config_v2.json')
 
 def set_config(config_path):
     if os.path.lexists(config_path):
@@ -99,6 +100,7 @@ def set_config(config_path):
             args = AttrDict(json.load(f))
             print("config file loaded.")
             print(args.pretrained_model)
+            print(args.run)
     else:
         assert False, 'config json file cannot be found.. please check the path again.'
     
@@ -115,7 +117,7 @@ os.makedirs(args.config_dir, exist_ok=True)
 
 # # 2. EDA 및 데이터 전처리
 
-# In[6]:
+# In[77]:
 
 
 # data 경로 설정  
@@ -126,7 +128,7 @@ print("train 데이터 경로가 올바른가요? : ", os.path.lexists(train_pat
 
 # ### 2-1. Train 데이터 확인
 
-# In[7]:
+# In[78]:
 
 
 train_df = pd.read_csv(train_path, encoding = 'UTF-8-SIG')
@@ -134,7 +136,7 @@ train_df = pd.read_csv(train_path, encoding = 'UTF-8-SIG')
 train_df.head()
 
 
-# In[8]:
+# In[79]:
 
 
 ### v2 에서 추가됨
@@ -144,7 +146,7 @@ max_len_title = np.max(train_df['title'].str.len())
 max_len_title
 
 
-# In[9]:
+# In[80]:
 
 
 # comment 중 가장 긴 타이틀 길이
@@ -152,27 +154,27 @@ max_len_comment=np.max(train_df['comment'].str.len())
 max_len_comment
 
 
-# In[10]:
+# In[81]:
 
 
 # 길이가 128이 넘는 코멘트 확인
 train_df['comment'][train_df['comment'].str.len()>128]
 
 
-# In[11]:
+# In[82]:
 
 
 len(train_df)
 
 
-# In[12]:
+# In[83]:
 
 
 print("bias classes: ", train_df.bias.unique())
 print("hate classes: ", train_df.hate.unique())
 
 
-# In[13]:
+# In[84]:
 
 
 pd.crosstab(train_df.bias, train_df.hate, margins=True)
@@ -180,24 +182,36 @@ pd.crosstab(train_df.bias, train_df.hate, margins=True)
 
 # ### 2-2. Test 데이터 확인
 
-# In[14]:
+# In[85]:
 
 
 test_path = os.path.join(args.data_dir,'test.csv')
 print("test 데이터 경로가 올바른가요? : ", os.path.lexists(test_path))
 
 
-# In[15]:
+# In[86]:
 
 
 test_df = pd.read_csv(test_path)
 test_df.head()
 
 
-# In[16]:
+# In[87]:
 
 
 len(test_df)
+
+
+# In[88]:
+
+
+np.max(test_df['title'].str.len())
+
+
+# In[89]:
+
+
+np.max(test_df['comment'].str.len())
 
 
 # ### 2-3. 데이터 전처리 (Label Encoding)
@@ -205,7 +219,7 @@ len(test_df)
 
 # - bias, hate 컬럼을 합쳐서 하나의 라벨로 만들기 
 
-# In[17]:
+# In[90]:
 
 
 # 두 라벨의 가능한 모든 조합 만들기
@@ -215,7 +229,7 @@ if DEBUG==True:
     print(combinations)
 
 
-# In[18]:
+# In[91]:
 
 
 # bias, hate 컬럼을 합친 것
@@ -225,7 +239,7 @@ if DEBUG==True:
     print(bias_hate[:5])
 
 
-# In[19]:
+# In[92]:
 
 
 labels = []
@@ -242,7 +256,7 @@ train_df.head()
 
 # ### 3-0. Pre-trained tokenizer 탐색
 
-# In[20]:
+# In[93]:
 
 
 # config.json 에서 지정 이름별로 가져올 라이브러리 지정
@@ -251,13 +265,14 @@ TOKENIZER_CLASSES = {
     "BertTokenizer": BertTokenizer,
     "AutoTokenizer": AutoTokenizer,
     "ElectraTokenizer": ElectraTokenizer,
-    "AlbertTokenizer": AlbertTokenizer
+    "AlbertTokenizer": AlbertTokenizer,
+    "Kobert" : KoBERTTokenizer
 }
 
 
 # - Tokenizer 사용 예시
 
-# In[21]:
+# In[94]:
 
 
 TOKENIZER = TOKENIZER_CLASSES[args.tokenizer_class].from_pretrained(args.pretrained_model)
@@ -265,7 +280,7 @@ if DEBUG==True:
     print(TOKENIZER)
 
 
-# In[22]:
+# In[95]:
 
 
 if DEBUG == True:
@@ -274,7 +289,7 @@ if DEBUG == True:
     print(TOKENIZER(example, comment_ex))
 
 
-# In[23]:
+# In[96]:
 
 
 if DEBUG==True:
@@ -287,15 +302,9 @@ if DEBUG==True:
     print(TOKENIZER.convert_tokens_to_ids(TOKENIZER.tokenize(example)))
 
 
-# In[ ]:
-
-
-
-
-
 # ### 3-1. Dataset 만드는 함수 정의
 
-# In[24]:
+# In[97]:
 
 
 class CustomDataset(torch.utils.data.Dataset):
@@ -350,7 +359,7 @@ train_dataset = CustomDataset(train_df, TOKENIZER, args.max_seq_len, mode ='trai
 print("train dataset loaded.")
 
 
-# In[25]:
+# In[98]:
 
 
 if DEBUG ==True :
@@ -358,7 +367,7 @@ if DEBUG ==True :
     print(train_dataset[0])
 
 
-# In[26]:
+# In[99]:
 
 
 # encoded_plus = tokenizer.encode_plus(
@@ -373,7 +382,7 @@ if DEBUG ==True :
 
 # ### 3-2. Train, Validation set 나누기
 
-# In[27]:
+# In[100]:
 
 
 from sklearn.model_selection import train_test_split
@@ -397,7 +406,7 @@ print("Validation dataset: ", len(val_dataset))
 # - [PretrainedConfig](https://huggingface.co/docs/transformers/v4.16.2/en/main_classes/configuration#transformers.PretrainedConfig.from_pretrained)
 # -[KcELECTRA 사전학습 모델](https://github.com/Beomi/KcELECTRA)
 
-# In[28]:
+# In[101]:
 
 
 from transformers import logging
@@ -405,6 +414,7 @@ logging.set_verbosity_error()
 
 # config.json 에 입력된 architecture 에 따라 베이스 모델 설정
 BASE_MODELS = {
+    'BertModel':BertModel,
     "BertForSequenceClassification": BertForSequenceClassification,
     "AutoModel": AutoModel,
     "ElectraForSequenceClassification": ElectraForSequenceClassification,
@@ -421,12 +431,6 @@ myModel = BASE_MODELS[args.architecture].from_pretrained(args.pretrained_model,
 if DEBUG==True:
     # 모델 구조 확인
     print(myModel)
-
-
-# In[29]:
-
-
-# !pip install git+https://git@github.com/SKTBrain/KoBERT.git@master
 
 
 # ### 4-2. 모델 설정
@@ -458,7 +462,7 @@ if DEBUG==True:
 # 
 # 
 
-# In[30]:
+# In[102]:
 
 
 ### v2 에서 일부 수정됨
@@ -514,15 +518,9 @@ model = myClassifier(myModel, selected_layers=False)
 #     print(model)
 
 
-# In[ ]:
-
-
-
-
-
 # ### 4-3. 모델 구성 확인
 
-# In[31]:
+# In[103]:
 
 
 if DEBUG==True:
@@ -552,7 +550,7 @@ if DEBUG==True:
 # 
 # - v2에서 코드 일부 삭제
 
-# In[32]:
+# In[104]:
 
 
 class LossEarlyStopper():
@@ -614,7 +612,7 @@ class LossEarlyStopper():
 #       - 처음 학습률(Learning rate)를 warm up하기 위한 비율을 설정하는 warmup_ratio을 설정합니다.
 #   
 
-# In[33]:
+# In[105]:
 
 
 args = set_config(config_path)
@@ -632,7 +630,7 @@ def train(model, train_data, val_data, args, mode = 'train'):
     
     # args.run은 실험 이름 (어디까지나 팀원들간의 버전 관리 및 공유 편의를 위한 것으로, 자유롭게 수정 가능합니다.)
     print("RUN : ", args.run)
-    shutil.copyfile("config.json", os.path.join(args.config_dir, f"config_{args.run}.json"))
+    shutil.copyfile("config_v2.json", os.path.join(args.config_dir, f"config_{args.run}.json"))
 
     early_stopper = LossEarlyStopper(patience=args.patience)
     
@@ -787,7 +785,7 @@ train(model, train_dataset, val_dataset, args, mode = 'train')
 # - v2 에서 수정된 부분
 #     - output -> output[0]
 
-# In[ ]:
+# In[106]:
 
 
 from torch.utils.data import DataLoader
@@ -832,7 +830,7 @@ SAVED_MODEL =  os.path.join(args.result_dir, f'best_{args.run}.pt')
 pred = test(model, SAVED_MODEL, test_data, args)
 
 
-# In[ ]:
+# In[107]:
 
 
 print("prediction completed for ", len(pred), "comments")
@@ -840,7 +838,7 @@ print("prediction completed for ", len(pred), "comments")
 
 # ### 
 
-# In[ ]:
+# In[108]:
 
 
 # 0-5 사이의 라벨 값 별로 bias, hate로 디코딩 하기 위한 딕셔너리
@@ -857,14 +855,14 @@ for idx, label in enumerate(pred):
 print('decode Completed!')
 
 
-# In[ ]:
+# In[109]:
 
 
 submit = pd.read_csv(os.path.join(args.data_dir,'sample_submission.csv'))
 submit
 
 
-# In[ ]:
+# In[110]:
 
 
 submit['bias'] = pred_bias
@@ -872,7 +870,7 @@ submit['hate'] = pred_hate
 submit
 
 
-# In[ ]:
+# In[111]:
 
 
 submit.to_csv(os.path.join(args.result_dir, f"submission_{args.run}.csv"), index=False)
