@@ -13,13 +13,13 @@
 
 # # 1. 환경 설정 및 라이브러리 불러오기
 
-# In[2]:
+# In[1]:
 
 
 # !pip install -r requirements.txt
 
 
-# In[35]:
+# In[1]:
 
 
 import pandas as pd
@@ -32,7 +32,7 @@ from sklearn.metrics import f1_score
 from datetime import datetime, timezone, timedelta
 import random
 from tqdm import tqdm
-
+from sklearn import preprocessing
 
 from attrdict import AttrDict
 import matplotlib.pyplot as plt
@@ -49,22 +49,27 @@ from transformers import (
     BertConfig,
     ElectraConfig
 )
-from kobert_tokenizer import KoBERTTokenizer
+
+### v2 에서 라이브러리 추가됨
+# 실험에 사용하실 모델 라이브러리를 추가하시는 걸 잊지 마세요!
+
 from transformers import (
     BertTokenizer,  
     AutoTokenizer,
     ElectraTokenizer,
+    AlbertTokenizer
 )
 
 from transformers import (
     BertModel,
     AutoModel, 
     ElectraForSequenceClassification,
-    BertForSequenceClassification
+    BertForSequenceClassification,
+    AlbertForSequenceClassification
 )
 
 
-# In[36]:
+# In[2]:
 
 
 # 사용할 GPU 지정
@@ -75,18 +80,18 @@ print("Does GPU exist? : ", use_cuda)
 DEVICE = torch.device("cuda" if use_cuda else "cpu")
 
 
-# In[37]:
+# In[30]:
 
 
 # True 일 때 코드를 실행하면 example 등을 보여줌
 DEBUG = False
 
 
-# In[38]:
+# In[ ]:
 
 
 # config 파일 불러오기
-config_path = os.path.join(os.getcwd(),'config.json')
+config_path = os.path.join('config_bias.json')
 
 def set_config(config_path):
     if os.path.lexists(config_path):
@@ -94,12 +99,12 @@ def set_config(config_path):
             args = AttrDict(json.load(f))
             print("config file loaded.")
             print(args.pretrained_model)
-            print(args.tokenizer_class)
+            print(args.run)
     else:
         assert False, 'config json file cannot be found.. please check the path again.'
     
     return args
-    
+
 
 # 코드 중간중간에 끼워넣어 리셋 가능
 args = set_config(config_path)
@@ -111,45 +116,33 @@ os.makedirs(args.config_dir, exist_ok=True)
 
 # # 2. EDA 및 데이터 전처리
 
-# In[39]:
+# In[5]:
 
 
 # data 경로 설정  
-train_path = os.path.join(args.data_dir,'EDA_train.csv')
+train_path = os.path.join(args.data_dir,'train.csv')
 
 print("train 데이터 경로가 올바른가요? : ", os.path.lexists(train_path))
 
 
 # ### 2-1. Train 데이터 확인
 
-# In[40]:
+# In[6]:
 
 
-train_df = pd.read_csv(train_path, encoding = 'utf-8')
-train_df = train_df.dropna()
+train_df = pd.read_csv(train_path, encoding = 'UTF-8-SIG')
+
+train_df.head()
 
 
-# In[41]:
-
-
-train_df['title'] = train_df['title'].astype('string')
-train_df['comment'] = train_df['comment'].astype('string')
-
-
-# In[42]:
-
-
-len(train_df)
-
-
-# In[43]:
+# In[7]:
 
 
 print("bias classes: ", train_df.bias.unique())
 print("hate classes: ", train_df.hate.unique())
 
 
-# In[44]:
+# In[8]:
 
 
 pd.crosstab(train_df.bias, train_df.hate, margins=True)
@@ -157,21 +150,21 @@ pd.crosstab(train_df.bias, train_df.hate, margins=True)
 
 # ### 2-2. Test 데이터 확인
 
-# In[45]:
+# In[9]:
 
 
 test_path = os.path.join(args.data_dir,'test.csv')
 print("test 데이터 경로가 올바른가요? : ", os.path.lexists(test_path))
 
 
-# In[46]:
+# In[10]:
 
 
 test_df = pd.read_csv(test_path)
 test_df.head()
 
 
-# In[47]:
+# In[11]:
 
 
 len(test_df)
@@ -180,65 +173,47 @@ len(test_df)
 # ### 2-3. 데이터 전처리 (Label Encoding)
 # bias, hate 라벨들의 class를 정수로 변경하여 라벨 인코딩을 하기 위한 딕셔너리입니다.
 
-# - bias, hate 컬럼을 합쳐서 하나의 라벨로 만들기 
+# - bias만 라벨로 한다.
 
-# In[48]:
-
-
-# 두 라벨의 가능한 모든 조합 만들기
-combinations = np.array(np.meshgrid(train_df.bias.unique(), train_df.hate.unique())).T.reshape(-1,2)
-
-if DEBUG==True:
-    print(combinations)
+# In[12]:
 
 
-# In[49]:
+# label_encoder object knows how to understand word labels.
+label_encoder = preprocessing.LabelEncoder()
+ 
+# Encode labels in column 'species'.
+labels =  label_encoder.fit_transform(train_df['bias'])
+
+#gender = 0, none = 1, others =2
 
 
-# bias, hate 컬럼을 합친 것
-bias_hate = list(np.array([train_df['bias'].values, train_df['hate'].values]).T.reshape(-1,2))
+# In[13]:
 
-if DEBUG==True:
-    print(bias_hate[:5])
-
-
-# In[50]:
-
-
-labels = []
-for i, arr in enumerate(bias_hate):
-    for idx, elem in enumerate(combinations):
-        if np.array_equal(elem, arr):
-            labels.append(idx)
 
 train_df['label'] = labels
-train_df.head()
+train_df.head(15)
 
 
 # ## 3. Dataset 로드
 
 # ### 3-0. Pre-trained tokenizer 탐색
 
-# In[51]:
-
-
-from kobert_tokenizer import KoBERTTokenizer
-
-
-# In[52]:
+# In[14]:
 
 
 # config.json 에서 지정 이름별로 가져올 라이브러리 지정
 
 TOKENIZER_CLASSES = {
     "BertTokenizer": BertTokenizer,
-    'Kobert':KoBERTTokenizer
+    "AutoTokenizer": AutoTokenizer,
+    "ElectraTokenizer": ElectraTokenizer,
+    "AlbertTokenizer": AlbertTokenizer
 }
 
 
 # - Tokenizer 사용 예시
 
-# In[53]:
+# In[15]:
 
 
 TOKENIZER = TOKENIZER_CLASSES[args.tokenizer_class].from_pretrained(args.pretrained_model)
@@ -246,15 +221,16 @@ if DEBUG==True:
     print(TOKENIZER)
 
 
-# In[54]:
+# In[16]:
 
 
 if DEBUG == True:
     example = train_df['title'][0]
-    print(TOKENIZER(example))
+    comment_ex = train_df['comment'][0]
+    print(TOKENIZER(example, comment_ex))
 
 
-# In[55]:
+# In[17]:
 
 
 if DEBUG==True:
@@ -269,7 +245,7 @@ if DEBUG==True:
 
 # ### 3-1. Dataset 만드는 함수 정의
 
-# In[56]:
+# In[18]:
 
 
 class CustomDataset(torch.utils.data.Dataset):
@@ -324,7 +300,7 @@ train_dataset = CustomDataset(train_df, TOKENIZER, args.max_seq_len, mode ='trai
 print("train dataset loaded.")
 
 
-# In[57]:
+# In[19]:
 
 
 if DEBUG ==True :
@@ -332,7 +308,7 @@ if DEBUG ==True :
     print(train_dataset[0])
 
 
-# In[58]:
+# In[20]:
 
 
 # encoded_plus = tokenizer.encode_plus(
@@ -347,12 +323,12 @@ if DEBUG ==True :
 
 # ### 3-2. Train, Validation set 나누기
 
-# In[59]:
+# In[21]:
 
 
 from sklearn.model_selection import train_test_split
                                                          
-train_data, val_data = train_test_split(train_df, test_size=0.1,shuffle=False)
+train_data, val_data = train_test_split(train_df, test_size=0.1, random_state=args.seed)
 
 train_dataset = CustomDataset(train_data, TOKENIZER, args.max_seq_len, 'train')
 val_dataset = CustomDataset(val_data, TOKENIZER, args.max_seq_len, 'validation')
@@ -363,15 +339,15 @@ print("Validation dataset: ", len(val_dataset))
 
 # ## 4. 분류 모델 학습을 위한 세팅
 
-# ### 4-1. BertForSequenceClassification 설정
+# ### 4-1. 아키텍쳐 설정
 
 # 
-# (https://huggingface.co/docs/transformers/v4.16.2/en/main_classes/configuration#transformers.PretrainedConfig.from_pretrained)
 # 
-# [PretrainedConfig](https://huggingface.co/transformers/v3.0.2/main_classes/configuration.html)
 # 
+# - [PretrainedConfig](https://huggingface.co/docs/transformers/v4.16.2/en/main_classes/configuration#transformers.PretrainedConfig.from_pretrained)
+# -[KcELECTRA 사전학습 모델](https://github.com/Beomi/KcELECTRA)
 
-# In[60]:
+# In[22]:
 
 
 from transformers import logging
@@ -379,7 +355,12 @@ logging.set_verbosity_error()
 
 # config.json 에 입력된 architecture 에 따라 베이스 모델 설정
 BASE_MODELS = {
-    "BertForSequenceClassification": BertForSequenceClassification
+    'BertModel':BertModel,
+    "BertForSequenceClassification": BertForSequenceClassification,
+    "AutoModel": AutoModel,
+    "ElectraForSequenceClassification": ElectraForSequenceClassification,
+    "AlbertForSequenceClassification": AlbertForSequenceClassification,
+
 }
 
 
@@ -393,7 +374,7 @@ if DEBUG==True:
     print(myModel)
 
 
-# In[61]:
+# In[23]:
 
 
 # !pip install git+https://git@github.com/SKTBrain/KoBERT.git@master
@@ -402,29 +383,83 @@ if DEBUG==True:
 # ### 4-2. 모델 설정
 
 # 
-# BertForSequenceClassifier (line 1232부터 참고) [source code](https://github.com/huggingface/transformers/blob/a39dfe4fb122c11be98a563fb8ca43b322e01036/src/transformers/modeling_bert.py#L1284-L1287)
+# - BertForSequenceClassifier (line 1232부터 참고) [source code](https://github.com/huggingface/transformers/blob/a39dfe4fb122c11be98a563fb8ca43b322e01036/src/transformers/modeling_bert.py#L1284-L1287)
+# 
+# - ElectraForSequenceClassifier [source code](https://huggingface.co/transformers/v3.0.2/_modules/transformers/modeling_electra.html#ElectraForSequenceClassification)
+# 
+# - SequenceClassier output 형태 : tuple(torch.FloatTensor)
+#     - loss (torch.FloatTensor of shape (1,), optional, returned when label is provided):
+#     Classification (or regression if config.num_labels==1) loss.
+# 
+#    - logits (torch.FloatTensor of shape (batch_size, config.num_labels)):
+#     Classification (or regression if config.num_labels==1) scores (before SoftMax).
+# 
+#     - hidden_states (tuple(torch.FloatTensor), optional, returned when output_hidden_states=True is passed or when config.output_hidden_states=True):
+#     Tuple of torch.FloatTensor (one for the output of the embeddings + one for the output of each layer) of shape (batch_size, sequence_length, hidden_size).
+# 
+#     - Hidden-states of the model at the output of each layer plus the initial embedding outputs.
+# 
+#     - attentions (tuple(torch.FloatTensor), optional, returned when output_attentions=True is passed or when config.output_attentions=True):
+# Tuple of torch.FloatTensor (one for each layer) of shape (batch_size, num_heads, sequence_length, sequence_length).
+# 
+#     Attentions weights after the attention softmax, used to compute the weighted average in the self-attention heads.
+#     
+#     
+# - v2 에서 수정 및 추가 된 부분 많음
 # 
 # 
 
-# In[62]:
+# In[24]:
 
 
+### v2 에서 일부 수정됨
 class myClassifier(nn.Module):
-    def __init__(self, model, hidden_size = 768, num_classes=args.num_classes, dr_rate=None, params=None):
+    def __init__(self, model, hidden_size = 768, num_classes=args.num_classes, selected_layers=False, params=None):
         super(myClassifier, self).__init__()
         self.model = model
-        self.softmax = nn.Softmax(dim=1)
+        self.softmax = nn.Softmax(dim=1) 
+        self.selected_layers = selected_layers
+        
+        # 사실 dr rate은 model config 에서 hidden_dropout_prob로 가져와야 하는데 bert에선 0.1이 쓰였음
+        self.dropout = nn.Dropout(0.1)
+
 
     def forward(self, token_ids, attention_mask, segment_ids):      
         outputs = self.model(input_ids = token_ids, 
                              token_type_ids = segment_ids.long(), 
                              attention_mask = attention_mask.float().to(token_ids.device))
-         
-        logits = outputs.logits
-        output = self.softmax(logits)
-        return output
         
-model = myClassifier(myModel, dr_rate=0.1)
+        # hidden state에서 마지막 4개 레이어를 뽑아 합쳐 새로운 pooled output 을 만드는 시도
+        if self.selected_layers == True:
+            hidden_states = outputs.hidden_states
+            pooled_output = torch.cat(tuple([hidden_states[i] for i in [-4, -3, -2, -1]]), dim=-1)
+            # print("concatenated output shape: ", pooled_output.shape)
+            ## dim(batch_size, max_seq_len, hidden_dim) 에서 가운데를 0이라 지정함으로, [cls] 토큰의 임베딩을 가져온다. 
+            ## (text classification 구조 참고)
+            pooled_output = pooled_output[:, 0, :]
+            # print(pooled_output)
+
+            pooled_output = self.dropout(pooled_output)
+
+            ## 3개의 레이어를 합치므로 classifier의 차원은 (hidden_dim, 6)이다
+            classifier = nn.Linear(pooled_output.shape[1], args.num_classes).to(token_ids.device)
+            logits = classifier(pooled_output)
+        
+        else:
+            logits=outputs.logits
+        
+    
+        # 각 클래스별 확률
+        prob= self.softmax(logits)
+        # print(prob)
+        # logits2 = outputs.logits
+        # print(self.softmax(logits2))
+
+
+        return logits, prob
+        
+# 마지막 4 hidden layers concat 하는 방법을 쓰신다면 True로 변경        
+model = myClassifier(myModel, selected_layers=False)
 
 # if DEBUG ==True :
 #     print(model)
@@ -432,34 +467,37 @@ model = myClassifier(myModel, dr_rate=0.1)
 
 # ### 4-3. 모델 구성 확인
 
-# In[63]:
+# In[25]:
 
 
-params = list(model.named_parameters())
+if DEBUG==True:
+    params = list(model.named_parameters())
 
-print('The BERT model has {:} different named parameters.\n'.format(len(params)))
+    print('The BERT model has {:} different named parameters.\n'.format(len(params)))
 
-print('==== Embedding Layer ====\n')
+    print('==== Embedding Layer ====\n')
 
-for p in params[0:5]:
-    print("{:<55} {:>12}".format(p[0], str(tuple(p[1].size()))))
+    for p in params[0:5]:
+        print("{:<55} {:>12}".format(p[0], str(tuple(p[1].size()))))
 
-print('\n==== First Transformer ====\n')
+    print('\n==== First Transformer ====\n')
 
-for p in params[5:21]:
-    print("{:<55} {:>12}".format(p[0], str(tuple(p[1].size()))))
+    for p in params[5:21]:
+        print("{:<55} {:>12}".format(p[0], str(tuple(p[1].size()))))
 
-print('\n==== Output Layer ====\n')
+    print('\n==== Output Layer ====\n')
 
-for p in params[-4:]:
-    print("{:<55} {:>12}".format(p[0], str(tuple(p[1].size()))))
+    for p in params[-4:]:
+        print("{:<55} {:>12}".format(p[0], str(tuple(p[1].size()))))
 
 
 # ## 5. 학습 진행
 
 # ### 5-0. Early Stopper 함수 정의
+# 
+# - v2에서 코드 일부 삭제
 
-# In[64]:
+# In[26]:
 
 
 class LossEarlyStopper():
@@ -486,7 +524,6 @@ class LossEarlyStopper():
         self.stop = False
 
     def check_early_stopping(self, loss: float)-> None:
-        msg = ''
         # 첫 에폭
         if self.min_loss == np.Inf:
             self.min_loss = loss
@@ -499,28 +536,33 @@ class LossEarlyStopper():
             # patience 만큼 loss가 줄지 않았다면 학습을 중단합니다.
             if self.patience_counter == self.patience:
                 self.stop = True
-  
+            print(msg)
         # loss가 줄어듬 -> min_loss 갱신, patience_counter 초기화
         elif loss <= self.min_loss:
             self.patience_counter = 0
-            self.save_model = True
+            ### v2 에서 수정됨
+            ### self.save_model = True -> 삭제 (사용하지 않음)
             msg = f"Validation loss decreased {self.min_loss} -> {loss}"
             self.min_loss = loss
 
-        print(msg)
+            print(msg)
 
 
 # ### 5-1. Epoch 별 학습 및 검증
 
+# - [Transformers optimization documentation](https://huggingface.co/docs/transformers/main_classes/optimizer_schedules)
+# - [스케줄러 documentation](https://huggingface.co/docs/transformers/main_classes/optimizer_schedules#schedules)
 # - Adam optimizer의 epsilon 파라미터 eps = 1e-8 는 "계산 중 0으로 나눔을 방지 하기 위한 아주 작은 숫자 " 입니다. ([출처](https://machinelearningmastery.com/adam-optimization-algorithm-for-deep-learning/))
-# - `warmup_ratio` : 
-#   - 학습이 진행되면서 학습률을 그 상황에 맞게 가변적으로 적당하게 변경되게 하기 위해 Scheduler를 사용합니다.
-#   - 처음 학습률(Learning rate)를 warm up하기 위한 비율을 설정하는 warmup_ratio을 설정합니다.
+# - 스케줄러 파라미터
+#     - `warmup_ratio` : 
+#       - 학습이 진행되면서 학습률을 그 상황에 맞게 가변적으로 적당하게 변경되게 하기 위해 Scheduler를 사용합니다.
+#       - 처음 학습률(Learning rate)를 warm up하기 위한 비율을 설정하는 warmup_ratio을 설정합니다.
+#   
 
-# In[65]:
+# In[34]:
 
 
-# args = set_config(config_path)
+args = set_config(config_path)
 
 logging.set_verbosity_warning()
 
@@ -535,19 +577,18 @@ def train(model, train_data, val_data, args, mode = 'train'):
     
     # args.run은 실험 이름 (어디까지나 팀원들간의 버전 관리 및 공유 편의를 위한 것으로, 자유롭게 수정 가능합니다.)
     print("RUN : ", args.run)
-    shutil.copyfile("config.json", os.path.join(args.config_dir, f"config_{args.run}.json"))
+    shutil.copyfile("config_bias.json", os.path.join(args.config_dir, f"config_{args.run}.json"))
 
     early_stopper = LossEarlyStopper(patience=args.patience)
     
-    train_dataloader = torch.utils.data.DataLoader(train_data, batch_size=args.train_batch_size, shuffle=False)
+    train_dataloader = torch.utils.data.DataLoader(train_data, batch_size=args.train_batch_size, shuffle=True)
     val_dataloader = torch.utils.data.DataLoader(val_data, batch_size=args.train_batch_size)
 
-    DEBUG=False
     
-    if DEBUG==True:
+    if False:
         # 데이터로더가 성공적으로 로드 되었는지 확인
         for idx, data in enumerate(train_dataloader):
-            if idx==60:
+            if idx==0:
                 print("batch size : ", len(data[0]['input_ids']))
                 print("The first batch looks like ..\n", data[0])
     
@@ -556,24 +597,26 @@ def train(model, train_data, val_data, args, mode = 'train'):
     
     total_steps = len(train_dataloader) * args.train_epochs
 
-    optimizer = Adam(model.parameters(), lr=args.learning_rate, eps=args.adam_epsilon)
-    scheduler = get_linear_schedule_with_warmup(optimizer, num_warmup_steps=int(total_steps * args.warmup_proportion), num_training_steps=total_steps)
+    ### v2에서 수정됨 (Adam -> AdamW)
+    optimizer = AdamW(model.parameters(), lr=args.learning_rate, eps=args.adam_epsilon)
+    scheduler = get_linear_schedule_with_warmup(optimizer, num_warmup_steps=int(total_steps * args.warmup_proportion), 
+                                                num_training_steps=total_steps)
 
     
     if use_cuda:
         model = model.to(DEVICE)
         criterion = criterion.to(DEVICE)
         
-   # model.train()
-    optimizer.zero_grad()
 
     tr_loss = 0.0
-    val_loss = 0
-    best_score = 0
+    val_loss = 0.0
+    best_score = 0.0
+    ### v2에서 변경됨
+    best_loss = np.inf
       
 
     for epoch_num in range(args.train_epochs):
-            model.train()
+
             total_acc_train = 0
             total_loss_train = 0
             
@@ -582,22 +625,30 @@ def train(model, train_data, val_data, args, mode = 'train'):
             if mode =='train':
                 for train_input, train_label in tqdm(train_dataloader):
                     
+                    
                     mask = train_input['attention_mask'].to(DEVICE)
                     input_id = train_input['input_ids'].squeeze(1).to(DEVICE)
                     segment_ids = train_input['token_type_ids'].squeeze(1).to(DEVICE)
-                    train_label = train_label.long().to(DEVICE)                
-
-                    output = model(input_id, mask, segment_ids)
+                    train_label = train_label.long().to(DEVICE)  
                     
-                    batch_loss = criterion(output.view(-1,6), train_label.view(-1))
+                    ### v2에 수정됨
+                    optimizer.zero_grad()
+ 
+                    output = model(input_id, mask, segment_ids)
+                    batch_loss = criterion(output[0].view(-1,agrs.num_classes), train_label.view(-1))
                     total_loss_train += batch_loss.item()
 
-                    acc = (output.argmax(dim=1) == train_label).sum().item()
+                    acc = (output[0].argmax(dim=1) == train_label).sum().item()
                     total_acc_train += acc
-
-                    model.zero_grad()
+                    
+                    ### v2에 수정됨
+                    optimizer.zero_grad()
+                    
                     batch_loss.backward()
                     optimizer.step()
+                    
+                    ### v2 에 수정됨
+                    scheduler.step()
                     
 
             total_acc_val = 0
@@ -616,11 +667,13 @@ def train(model, train_data, val_data, args, mode = 'train'):
                     val_label = val_label.long().to(DEVICE)
 
                     output = model(input_id, mask, segment_ids)
-
-                    batch_loss = criterion(output.view(-1,6), val_label.view(-1))
+                    ### v2 에서 일부 수정 (output -> output[0]로 myClassifier 모델에 정의된대로 logits 가져옴)
+                    
+                    batch_loss = criterion(output[0].view(-1,agrs.num_classes), val_label.view(-1))
                     total_loss_val += batch_loss.item()
                     
-                    acc = (output.argmax(dim=1) == val_label).sum().item()
+                    ### v2 에서 일부 수정 (output -> output[0]로 myClassifier 모델에 정의된대로 logits 가져옴)
+                    acc = (output[0].argmax(dim=1) == val_label).sum().item()
                     total_acc_val += acc
             
             
@@ -644,10 +697,17 @@ def train(model, train_data, val_data, args, mode = 'train'):
                 print('Early stopped, Best score : ', best_score)
                 break
 
-            if val_accuracy > best_score:
-            # 모델이 개선됨 -> 검증 점수와 weight 갱신
-                best_score = val_accuracy
+            ### v2 에 수정됨
+            ### loss와 accuracy가 꼭 correlate하진 않습니다.
+            ### 
+            ### 원본 (필요하다면 다시 해제 후 사용)
+            # if val_accuracy > best_score : 
+            if val_loss < best_loss :
+            # 모델이 개선됨 -> 검증 점수와 베스트 loss, weight 갱신
+                best_score = val_accuracy 
                 
+                ### v2에서 추가
+                best_loss =val_loss
                 # 학습된 모델을 저장할 디렉토리 및 모델 이름 지정
                 SAVED_MODEL =  os.path.join(args.result_dir, f'best_{args.run}.pt')
             
@@ -658,17 +718,22 @@ def train(model, train_data, val_data, args, mode = 'train'):
                 }
                 torch.save(check_point, SAVED_MODEL)  
               
+            # print("scheduler : ", scheduler.state_dict())
 
 
-            
+    print("train finished")
 
 
 train(model, train_dataset, val_dataset, args, mode = 'train')
 
 
 # ## 6. Test dataset으로 추론 (Prediction)
+# 
+# 
+# - v2 에서 수정된 부분
+#     - output -> output[0]
 
-# In[ ]:
+# In[35]:
 
 
 from torch.utils.data import DataLoader
@@ -701,7 +766,7 @@ def test(model, SAVED_MODEL, test_data, args, mode = 'test'):
 
             output = model(input_id, mask, segment_ids)
 
-            output = output.argmax(dim=1).cpu().tolist()
+            output = output[0].argmax(dim=1).cpu().tolist()
 
             for label in output:
                 pred.append(label)
@@ -713,42 +778,54 @@ SAVED_MODEL =  os.path.join(args.result_dir, f'best_{args.run}.pt')
 pred = test(model, SAVED_MODEL, test_data, args)
 
 
-# In[34]:
+# In[36]:
 
 
 print("prediction completed for ", len(pred), "comments")
 
 
-# ### 
+# ### Submit
 
-# In[35]:
+# In[39]:
 
 
 # 0-5 사이의 라벨 값 별로 bias, hate로 디코딩 하기 위한 딕셔너리
-bias_dict = {0: 'none', 1: 'none', 2: 'others', 3:'others', 4:'gender', 5:'gender'}
-hate_dict = {0: 'none', 1: 'hate', 2: 'none', 3:'hate', 4:'none', 5:'hate'}
+bias_dict = {0: 'gender', 1: 'none', 2: 'others'}
 
 # 인코딩 값으로 나온 타겟 변수를 디코딩
 pred_bias = ['' for i in range(len(pred))]
-pred_hate = ['' for i in range(len(pred))]
 
 for idx, label in enumerate(pred):
     pred_bias[idx]=(str(bias_dict[label]))
-    pred_hate[idx]=(str(hate_dict[label]))
 print('decode Completed!')
 
 
-# In[36]:
+# #### 이어붙이기
+
+# In[43]:
+
+
+original = pd.read_csv('./result/submission_monologg_batch16.csv')
+original['bias'] = pred_bias
+original.to_csv('./result/submission_monologg_batch16_bias.csv',index=False)
+
+
+# In[211]:
 
 
 submit = pd.read_csv(os.path.join(args.data_dir,'sample_submission.csv'))
+submit
+
+
+# In[212]:
+
 
 submit['bias'] = pred_bias
 submit['hate'] = pred_hate
 submit
 
 
-# In[37]:
+# In[213]:
 
 
 submit.to_csv(os.path.join(args.result_dir, f"submission_{args.run}.csv"), index=False)
