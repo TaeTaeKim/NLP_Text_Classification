@@ -19,7 +19,7 @@
 # !pip install -r requirements.txt
 
 
-# In[2]:
+# In[1]:
 
 
 import pandas as pd
@@ -69,7 +69,7 @@ from transformers import (
 )
 
 
-# In[3]:
+# In[2]:
 
 
 # 사용할 GPU 지정
@@ -80,14 +80,14 @@ print("Does GPU exist? : ", use_cuda)
 DEVICE = torch.device("cuda" if use_cuda else "cpu")
 
 
-# In[4]:
+# In[3]:
 
 
 # True 일 때 코드를 실행하면 example 등을 보여줌
 DEBUG = False
 
 
-# In[29]:
+# In[4]:
 
 
 # config 파일 불러오기
@@ -116,7 +116,7 @@ os.makedirs(args.config_dir, exist_ok=True)
 
 # # 2. EDA 및 데이터 전처리
 
-# In[30]:
+# In[5]:
 
 
 # data 경로 설정  
@@ -127,7 +127,7 @@ print("train 데이터 경로가 올바른가요? : ", os.path.lexists(train_pat
 
 # ### 2-1. Train 데이터 확인
 
-# In[31]:
+# In[6]:
 
 
 train_df = pd.read_csv(train_path, encoding = 'UTF-8-SIG')
@@ -135,14 +135,14 @@ train_df = pd.read_csv(train_path, encoding = 'UTF-8-SIG')
 train_df.head()
 
 
-# In[32]:
+# In[7]:
 
 
 print("bias classes: ", train_df.bias.unique())
 print("hate classes: ", train_df.hate.unique())
 
 
-# In[33]:
+# In[8]:
 
 
 pd.crosstab(train_df.bias, train_df.hate, margins=True)
@@ -150,21 +150,21 @@ pd.crosstab(train_df.bias, train_df.hate, margins=True)
 
 # ### 2-2. Test 데이터 확인
 
-# In[34]:
+# In[9]:
 
 
 test_path = os.path.join(args.data_dir,'test.csv')
 print("test 데이터 경로가 올바른가요? : ", os.path.lexists(test_path))
 
 
-# In[35]:
+# In[10]:
 
 
 test_df = pd.read_csv(test_path)
 test_df.head()
 
 
-# In[36]:
+# In[11]:
 
 
 len(test_df)
@@ -175,7 +175,7 @@ len(test_df)
 
 # - bias만 라벨로 한다.
 
-# In[37]:
+# In[12]:
 
 
 # label_encoder object knows how to understand word labels.
@@ -187,7 +187,7 @@ labels =  label_encoder.fit_transform(train_df['hate'])
 #hate = 0, none = 1
 
 
-# In[38]:
+# In[13]:
 
 
 train_df['label'] = labels
@@ -198,7 +198,7 @@ train_df.head(15)
 
 # ### 3-0. Pre-trained tokenizer 탐색
 
-# In[39]:
+# In[14]:
 
 
 # config.json 에서 지정 이름별로 가져올 라이브러리 지정
@@ -213,7 +213,7 @@ TOKENIZER_CLASSES = {
 
 # - Tokenizer 사용 예시
 
-# In[40]:
+# In[15]:
 
 
 TOKENIZER = TOKENIZER_CLASSES[args.tokenizer_class].from_pretrained(args.pretrained_model)
@@ -221,7 +221,7 @@ if DEBUG==True:
     print(TOKENIZER)
 
 
-# In[41]:
+# In[16]:
 
 
 if DEBUG == True:
@@ -230,7 +230,7 @@ if DEBUG == True:
     print(TOKENIZER(example, comment_ex))
 
 
-# In[42]:
+# In[17]:
 
 
 if DEBUG==True:
@@ -245,7 +245,7 @@ if DEBUG==True:
 
 # ### 3-1. Dataset 만드는 함수 정의
 
-# In[43]:
+# In[18]:
 
 
 class CustomDataset(torch.utils.data.Dataset):
@@ -300,7 +300,7 @@ train_dataset = CustomDataset(train_df, TOKENIZER, args.max_seq_len, mode ='trai
 print("train dataset loaded.")
 
 
-# In[44]:
+# In[19]:
 
 
 if DEBUG ==True :
@@ -308,7 +308,7 @@ if DEBUG ==True :
     print(train_dataset[0])
 
 
-# In[45]:
+# In[20]:
 
 
 # encoded_plus = tokenizer.encode_plus(
@@ -323,7 +323,7 @@ if DEBUG ==True :
 
 # ### 3-2. Train, Validation set 나누기
 
-# In[46]:
+# In[21]:
 
 
 from sklearn.model_selection import train_test_split
@@ -347,7 +347,7 @@ print("Validation dataset: ", len(val_dataset))
 # - [PretrainedConfig](https://huggingface.co/docs/transformers/v4.16.2/en/main_classes/configuration#transformers.PretrainedConfig.from_pretrained)
 # -[KcELECTRA 사전학습 모델](https://github.com/Beomi/KcELECTRA)
 
-# In[47]:
+# In[22]:
 
 
 from transformers import logging
@@ -403,7 +403,7 @@ if DEBUG==True:
 # 
 # 
 
-# In[48]:
+# In[23]:
 
 
 ### v2 에서 일부 수정됨
@@ -461,7 +461,7 @@ model = myClassifier(myModel, selected_layers=False)
 
 # ### 4-3. 모델 구성 확인
 
-# In[49]:
+# In[24]:
 
 
 if DEBUG==True:
@@ -491,7 +491,7 @@ if DEBUG==True:
 # 
 # - v2에서 코드 일부 삭제
 
-# In[50]:
+# In[25]:
 
 
 class LossEarlyStopper():
@@ -553,7 +553,7 @@ class LossEarlyStopper():
 #       - 처음 학습률(Learning rate)를 warm up하기 위한 비율을 설정하는 warmup_ratio을 설정합니다.
 #   
 
-# In[51]:
+# In[26]:
 
 
 args = set_config(config_path)
@@ -727,7 +727,7 @@ train(model, train_dataset, val_dataset, args, mode = 'train')
 # - v2 에서 수정된 부분
 #     - output -> output[0]
 
-# In[52]:
+# In[27]:
 
 
 from torch.utils.data import DataLoader
@@ -772,7 +772,7 @@ SAVED_MODEL =  os.path.join(args.result_dir, f'best_{args.run}.pt')
 pred = test(model, SAVED_MODEL, test_data, args)
 
 
-# In[53]:
+# In[28]:
 
 
 print("prediction completed for ", len(pred), "comments")
@@ -780,7 +780,7 @@ print("prediction completed for ", len(pred), "comments")
 
 # ### Submission
 
-# In[54]:
+# In[29]:
 
 
 # 0-5 사이의 라벨 값 별로 bias, hate로 디코딩 하기 위한 딕셔너리
@@ -794,7 +794,7 @@ for idx, label in enumerate(pred):
 print('decode Completed!')
 
 
-# In[55]:
+# In[30]:
 
 
 original = pd.read_csv('./result/submission_monologg_batch16.csv')

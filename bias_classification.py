@@ -80,14 +80,14 @@ print("Does GPU exist? : ", use_cuda)
 DEVICE = torch.device("cuda" if use_cuda else "cpu")
 
 
-# In[30]:
+# In[3]:
 
 
 # True 일 때 코드를 실행하면 example 등을 보여줌
 DEBUG = False
 
 
-# In[ ]:
+# In[4]:
 
 
 # config 파일 불러오기
@@ -559,7 +559,7 @@ class LossEarlyStopper():
 #       - 처음 학습률(Learning rate)를 warm up하기 위한 비율을 설정하는 warmup_ratio을 설정합니다.
 #   
 
-# In[34]:
+# In[29]:
 
 
 args = set_config(config_path)
@@ -635,7 +635,7 @@ def train(model, train_data, val_data, args, mode = 'train'):
                     optimizer.zero_grad()
  
                     output = model(input_id, mask, segment_ids)
-                    batch_loss = criterion(output[0].view(-1,agrs.num_classes), train_label.view(-1))
+                    batch_loss = criterion(output[0].view(-1,args.num_classes), train_label.view(-1))
                     total_loss_train += batch_loss.item()
 
                     acc = (output[0].argmax(dim=1) == train_label).sum().item()
@@ -669,7 +669,7 @@ def train(model, train_data, val_data, args, mode = 'train'):
                     output = model(input_id, mask, segment_ids)
                     ### v2 에서 일부 수정 (output -> output[0]로 myClassifier 모델에 정의된대로 logits 가져옴)
                     
-                    batch_loss = criterion(output[0].view(-1,agrs.num_classes), val_label.view(-1))
+                    batch_loss = criterion(output[0].view(-1,args.num_classes), val_label.view(-1))
                     total_loss_val += batch_loss.item()
                     
                     ### v2 에서 일부 수정 (output -> output[0]로 myClassifier 모델에 정의된대로 logits 가져옴)
@@ -733,7 +733,7 @@ train(model, train_dataset, val_dataset, args, mode = 'train')
 # - v2 에서 수정된 부분
 #     - output -> output[0]
 
-# In[35]:
+# In[30]:
 
 
 from torch.utils.data import DataLoader
@@ -778,7 +778,7 @@ SAVED_MODEL =  os.path.join(args.result_dir, f'best_{args.run}.pt')
 pred = test(model, SAVED_MODEL, test_data, args)
 
 
-# In[36]:
+# In[31]:
 
 
 print("prediction completed for ", len(pred), "comments")
@@ -786,7 +786,7 @@ print("prediction completed for ", len(pred), "comments")
 
 # ### Submit
 
-# In[39]:
+# In[32]:
 
 
 # 0-5 사이의 라벨 값 별로 bias, hate로 디코딩 하기 위한 딕셔너리
@@ -802,12 +802,12 @@ print('decode Completed!')
 
 # #### 이어붙이기
 
-# In[43]:
+# In[33]:
 
 
 original = pd.read_csv('./result/submission_monologg_batch16.csv')
 original['bias'] = pred_bias
-original.to_csv('./result/submission_monologg_batch16_bias.csv',index=False)
+original.to_csv('./result/submission_kcElectra_batch16_bias.csv',index=False)
 
 
 # In[211]:

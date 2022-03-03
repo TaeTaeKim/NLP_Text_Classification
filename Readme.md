@@ -17,12 +17,16 @@
 | skt/kobert-base-v1                    | BertForSequenceClassifier        | BertTokenizer    | adam  | None       | 32        | 10    | 42.4  |
 | skt/kobert-base-v1                    | BertForSequenceClassifier        | BertTokenizer    | adamW | OneCycleLR | 32        | 10    | 49.3  |
 | KcELECTRA-base                        | ElectraForSequenceClassification | ElectraTokenizer | adamW | OneCycleLR | 32        | 30    | 67.6  |
-| kykim/electra-kor-base                | ElectraForSequenceClassification | ElectraTokenizer | adamW | OneCycleLR | 32        | 30    | **_70.9_**  |
+| kykim/electra-kor-base                | ElectraForSequenceClassification | ElectraTokenizer | adamW | OneCycleLR | 32        | 30    | 70.9  |
 | monologg/koelectra-base-discriminator | ElectraForSequenceClassification | ElectraTokenizer | adamW | OneCycleLR | 32        | 50    | 64.09 |
 | monologg/koelectra-base-discriminator | ElectraForSequenceClassification | ElectraTokenizer | adamW | OneCycleLR | 16        | 50    | 66.04 |
-| monologg/koelectra-base-v3-bias|ElectraForSequenceClassification|ElectraTokenizer|adamW|OneCycleLR|16|50|**_70.9_**|
-| monologg/koelectra-base-v3-hate-speech|ElectraForSequenceClassification|ElectraTokenizer|adamW|OneCycleLR|16|50|64.09|
-| monologg bias, hate모델 결합|ElectraForSequenceClassification|ElectraTokenizer|adamW|OneCycleLR|16|50|70.07|
+| monologg/koelectra-base-v3-bias       |ElectraForSequenceClassification  |ElectraTokenizer  |adamW  |OneCycleLR  |16         |50     |70.9|
+| monologg/koelectra-base-v3-hate-speech|ElectraForSequenceClassification  |ElectraTokenizer|adamW|OneCycleLR|16|50|64.09|
+| monologg bias, hate모델 결합          |ElectraForSequenceClassification  |ElectraTokenizer|adamW|OneCycleLR|16|50|70.07|
+|beomi/beep-KcELECTRA-base-bias|ElectraForSequenceClassification|ElectraTokenizer|adamW|OneCycleLR|16|50|71.7|
+|beomi/beep-KcELECTRA-base-hate|ElectraForSequenceClassification|ElectraTokenizer|adamW|OneCycleLR|16|50|68.1|
+|beomi/beep-KcELECTRA-base-통합|ElectraForSequenceClassification|ElectraTokenizer|adamW|OneCycleLR|16|50|73.8|
+
 
 ## 추가 데이터 투입
 

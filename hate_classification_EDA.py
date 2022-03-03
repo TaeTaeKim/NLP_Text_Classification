@@ -19,7 +19,7 @@
 # !pip install -r requirements.txt
 
 
-# In[ ]:
+# In[1]:
 
 
 import pandas as pd
@@ -69,7 +69,7 @@ from transformers import (
 )
 
 
-# In[ ]:
+# In[2]:
 
 
 # 사용할 GPU 지정
@@ -80,14 +80,14 @@ print("Does GPU exist? : ", use_cuda)
 DEVICE = torch.device("cuda" if use_cuda else "cpu")
 
 
-# In[ ]:
+# In[3]:
 
 
 # True 일 때 코드를 실행하면 example 등을 보여줌
 DEBUG = False
 
 
-# In[ ]:
+# In[4]:
 
 
 # config 파일 불러오기
@@ -116,7 +116,7 @@ os.makedirs(args.config_dir, exist_ok=True)
 
 # # 2. EDA 및 데이터 전처리
 
-# In[ ]:
+# In[5]:
 
 
 # data 경로 설정  
@@ -127,21 +127,21 @@ print("train 데이터 경로가 올바른가요? : ", os.path.lexists(train_pat
 
 # ### 2-1. Train 데이터 확인
 
-# In[ ]:
+# In[6]:
 
 
 train_df = pd.read_csv(train_path, encoding = 'UTF-8-SIG')
 train_df.dropna(inplace=True)
 
 
-# In[ ]:
+# In[7]:
 
 
 print("bias classes: ", train_df.bias.unique())
 print("hate classes: ", train_df.hate.unique())
 
 
-# In[ ]:
+# In[8]:
 
 
 pd.crosstab(train_df.bias, train_df.hate, margins=True)
@@ -212,15 +212,15 @@ TOKENIZER_CLASSES = {
 
 # - Tokenizer 사용 예시
 
-# In[15]:
+# In[33]:
 
 
 TOKENIZER = TOKENIZER_CLASSES[args.tokenizer_class].from_pretrained(args.pretrained_model)
-if DEBUG==True:
+if True:
     print(TOKENIZER)
 
 
-# In[16]:
+# In[34]:
 
 
 if DEBUG == True:
@@ -229,7 +229,7 @@ if DEBUG == True:
     print(TOKENIZER(example, comment_ex))
 
 
-# In[17]:
+# In[35]:
 
 
 if DEBUG==True:
@@ -244,7 +244,7 @@ if DEBUG==True:
 
 # ### 3-1. Dataset 만드는 함수 정의
 
-# In[18]:
+# In[36]:
 
 
 class CustomDataset(torch.utils.data.Dataset):
@@ -299,7 +299,7 @@ train_dataset = CustomDataset(train_df, TOKENIZER, args.max_seq_len, mode ='trai
 print("train dataset loaded.")
 
 
-# In[19]:
+# In[37]:
 
 
 if DEBUG ==True :
@@ -307,7 +307,7 @@ if DEBUG ==True :
     print(train_dataset[0])
 
 
-# In[20]:
+# In[38]:
 
 
 # encoded_plus = tokenizer.encode_plus(
@@ -322,7 +322,7 @@ if DEBUG ==True :
 
 # ### 3-2. Train, Validation set 나누기
 
-# In[21]:
+# In[39]:
 
 
 from sklearn.model_selection import train_test_split
@@ -346,7 +346,7 @@ print("Validation dataset: ", len(val_dataset))
 # - [PretrainedConfig](https://huggingface.co/docs/transformers/v4.16.2/en/main_classes/configuration#transformers.PretrainedConfig.from_pretrained)
 # -[KcELECTRA 사전학습 모델](https://github.com/Beomi/KcELECTRA)
 
-# In[22]:
+# In[40]:
 
 
 from transformers import logging
@@ -402,7 +402,7 @@ if DEBUG==True:
 # 
 # 
 
-# In[23]:
+# In[41]:
 
 
 ### v2 에서 일부 수정됨
@@ -460,7 +460,7 @@ model = myClassifier(myModel, selected_layers=False)
 
 # ### 4-3. 모델 구성 확인
 
-# In[24]:
+# In[42]:
 
 
 if DEBUG==True:
@@ -490,7 +490,7 @@ if DEBUG==True:
 # 
 # - v2에서 코드 일부 삭제
 
-# In[25]:
+# In[43]:
 
 
 class LossEarlyStopper():
@@ -552,7 +552,7 @@ class LossEarlyStopper():
 #       - 처음 학습률(Learning rate)를 warm up하기 위한 비율을 설정하는 warmup_ratio을 설정합니다.
 #   
 
-# In[26]:
+# In[ ]:
 
 
 args = set_config(config_path)
