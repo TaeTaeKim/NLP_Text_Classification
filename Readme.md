@@ -20,8 +20,9 @@
 | kykim/electra-kor-base                | ElectraForSequenceClassification | ElectraTokenizer | adamW | OneCycleLR | 32        | 30    | **_70.9_**  |
 | monologg/koelectra-base-discriminator | ElectraForSequenceClassification | ElectraTokenizer | adamW | OneCycleLR | 32        | 50    | 64.09 |
 | monologg/koelectra-base-discriminator | ElectraForSequenceClassification | ElectraTokenizer | adamW | OneCycleLR | 16        | 50    | 66.04 |
-| monologg/koelectra-base-v3-bias|ElectraForSequenceClassification|ElectraTokenizer|adamW|OneCycleLR|16|50|70.9|
+| monologg/koelectra-base-v3-bias|ElectraForSequenceClassification|ElectraTokenizer|adamW|OneCycleLR|16|50|**_70.9_**|
 | monologg/koelectra-base-v3-hate-speech|ElectraForSequenceClassification|ElectraTokenizer|adamW|OneCycleLR|16|50|64.09|
+| monologg bias, hate모델 결합|ElectraForSequenceClassification|ElectraTokenizer|adamW|OneCycleLR|16|50|70.07|
 
 ## 추가 데이터 투입
 
