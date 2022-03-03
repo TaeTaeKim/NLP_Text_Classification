@@ -26,7 +26,9 @@
 ### Bias와 hate를 각각 모델링 후 통합
 * bias성능은 충분하지만 hate성능이 충분하지 않아서 hate모델 위주로 최적화 시도
 
-1. bias
+#### **bias**
+
+
 | Pre_training                          | Model                            | Tokenizer        | Optim | Scheduler  | batchsize | epoch | ACC   |
 |---------------------------------------|----------------------------------|------------------|-------|------------|-----------|-------|-------|
 | monologg/koelectra-base-v3-bias       |ElectraForSequenceClassification  |ElectraTokenizer  |adamW  |get_cosine_schedule_with_warmup  |16         |50     |70.9|
@@ -35,14 +37,18 @@
 
 
 
-2. hate
+#### **hate**
+
+
 | Pre_training                          | Model                            | Tokenizer        | Optim | Scheduler  | batchsize | epoch | ACC   |
 |---------------------------------------|----------------------------------|------------------|-------|------------|-----------|-------|-------|
 | monologg/koelectra-base-v3-hate-speech|ElectraForSequenceClassification  |ElectraTokenizer|adamW|OneCycleLR|16|50|64.09|
 |beomi/beep-KcELECTRA-base-hate|ElectraForSequenceClassification|ElectraTokenizer|adamW|OneCycleLR|16|50|68.1|
 |beomi/beep-KcELECTRA-base-hate_EDA|ElectraForSequenceClassification|ElectraTokenizer|adamW|OneCycleLR|16|50|67.01|
 
-3. bias, hate통합
+#### **bias, hate통합**
+
+
 | Pre_training                          | Model                            | Tokenizer        | Optim | Scheduler  | batchsize | epoch | ACC   |
 |---------------------------------------|----------------------------------|------------------|-------|------------|-----------|-------|-------|
 | monologg bias, hate모델 결합          |ElectraForSequenceClassification  |ElectraTokenizer|adamW|OneCycleLR|16|50|70.07|
