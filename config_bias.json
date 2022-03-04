@@ -1,0 +1,19 @@
+{
+    "data_dir": "../data",
+    "result_dir": "./result/",
+    "config_dir": "./exp_config/",
+    "pretrained_model": "beomi/beep-KcELECTRA-base-bias",  
+    "architecture": "ElectraForSequenceClassification",
+    "tokenizer_class": "ElectraTokenizer",
+    "num_classes": 3,
+    "max_seq_len": 137,
+    "train_epochs": 50,
+    "adam_epsilon": 1e-8,
+    "seed": 42,
+    "train_batch_size": 16,
+    "eval_batch_size": 16,
+    "learning_rate": 1e-6,
+    "warmup_proportion": 0.1,
+    "run": "kcElectra_bias",
+    "patience": 3
+}
