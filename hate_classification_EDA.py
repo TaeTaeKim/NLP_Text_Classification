@@ -156,14 +156,14 @@ test_path = os.path.join(args.data_dir,'EDA_test.csv')
 print("test 데이터 경로가 올바른가요? : ", os.path.lexists(test_path))
 
 
-# In[10]:
+# In[14]:
 
 
 test_df = pd.read_csv(test_path)
 test_df.head()
 
 
-# In[11]:
+# In[15]:
 
 
 len(test_df)
@@ -174,7 +174,7 @@ len(test_df)
 
 # - bias만 라벨로 한다.
 
-# In[12]:
+# In[16]:
 
 
 # label_encoder object knows how to understand word labels.
@@ -186,7 +186,7 @@ labels =  label_encoder.fit_transform(train_df['hate'])
 #hate = 0, none = 1
 
 
-# In[13]:
+# In[17]:
 
 
 train_df['label'] = labels
@@ -197,7 +197,7 @@ train_df.head(15)
 
 # ### 3-0. Pre-trained tokenizer 탐색
 
-# In[14]:
+# In[18]:
 
 
 # config.json 에서 지정 이름별로 가져올 라이브러리 지정
@@ -212,10 +212,10 @@ TOKENIZER_CLASSES = {
 
 # - Tokenizer 사용 예시
 
-# In[33]:
+# In[19]:
 
 
-TOKENIZER = TOKENIZER_CLASSES[args.tokenizer_class].from_pretrained(args.pretrained_model)
+TOKENIZER = TOKENIZER_CLASSES[args.pretrained_model].from_pretrained(args.pretrained_model)
 if True:
     print(TOKENIZER)
 
@@ -552,7 +552,7 @@ class LossEarlyStopper():
 #       - 처음 학습률(Learning rate)를 warm up하기 위한 비율을 설정하는 warmup_ratio을 설정합니다.
 #   
 
-# In[ ]:
+# In[44]:
 
 
 args = set_config(config_path)
@@ -726,14 +726,14 @@ train(model, train_dataset, val_dataset, args, mode = 'train')
 # - v2 에서 수정된 부분
 #     - output -> output[0]
 
-# In[39]:
+# In[45]:
 
 
 test_df.rename(columns={'0':'title',"1":'comment'},inplace=True)
 test_df
 
 
-# In[40]:
+# In[46]:
 
 
 from torch.utils.data import DataLoader
@@ -778,7 +778,7 @@ SAVED_MODEL =  os.path.join(args.result_dir, f'best_{args.run}.pt')
 pred = test(model, SAVED_MODEL, test_data, args)
 
 
-# In[41]:
+# In[47]:
 
 
 print("prediction completed for ", len(pred), "comments")
@@ -786,7 +786,7 @@ print("prediction completed for ", len(pred), "comments")
 
 # ### Submission
 
-# In[42]:
+# In[48]:
 
 
 # 0-5 사이의 라벨 값 별로 bias, hate로 디코딩 하기 위한 딕셔너리
@@ -800,7 +800,7 @@ for idx, label in enumerate(pred):
 print('decode Completed!')
 
 
-# In[43]:
+# In[49]:
 
 
 original = pd.read_csv('./result/submission_monologg_batch16.csv')

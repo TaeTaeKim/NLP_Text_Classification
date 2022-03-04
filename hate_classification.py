@@ -347,7 +347,7 @@ print("Validation dataset: ", len(val_dataset))
 # - [PretrainedConfig](https://huggingface.co/docs/transformers/v4.16.2/en/main_classes/configuration#transformers.PretrainedConfig.from_pretrained)
 # -[KcELECTRA 사전학습 모델](https://github.com/Beomi/KcELECTRA)
 
-# In[22]:
+# In[ ]:
 
 
 from transformers import logging
@@ -403,7 +403,7 @@ if DEBUG==True:
 # 
 # 
 
-# In[23]:
+# In[ ]:
 
 
 ### v2 에서 일부 수정됨
@@ -461,7 +461,7 @@ model = myClassifier(myModel, selected_layers=False)
 
 # ### 4-3. 모델 구성 확인
 
-# In[24]:
+# In[ ]:
 
 
 if DEBUG==True:
@@ -491,7 +491,7 @@ if DEBUG==True:
 # 
 # - v2에서 코드 일부 삭제
 
-# In[25]:
+# In[ ]:
 
 
 class LossEarlyStopper():
