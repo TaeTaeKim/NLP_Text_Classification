@@ -1,10 +1,5 @@
-#!/usr/bin/env python
-# coding: utf-8
 
-# # [모의 캐글 - 게임] 비매너 댓글 식별 
-# 
 # - 자연어 multi label classification 과제
-# - 작성자 : MNC Sukyung Kim (skkim@mnc.ai)
 # 
 # 참고 논문 : 
 # - [BERT: Pre-training of Deep Bidirectional Transformers for
